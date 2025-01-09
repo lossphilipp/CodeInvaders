@@ -119,6 +119,7 @@ async fn calculate_enemy_movement(enemies: &mut Vec<Enemy>) {
     }
 }
 
+// Possible optimization: use bullet pool instead of creating & deleting new bullets every time
 async fn shoot_bullet(bullets: &mut Vec<Bullet>, player: &mut Player, last_shot: &mut f64) {
     let current_time = get_time();
     if is_key_down(KeyCode::Space) && current_time - *last_shot > 0.3 {

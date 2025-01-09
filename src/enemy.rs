@@ -42,7 +42,6 @@ impl Enemy {
     fn change_direction(&mut self) {
         self.position.y += self.texture.height() * self.scale;
 
-
         self.current_direction = match self.current_direction {
             Direction::Left => Direction::Right,
             Direction::Right => Direction::Left,
