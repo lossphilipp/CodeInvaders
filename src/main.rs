@@ -14,7 +14,7 @@ enum GameState {
 }
 
 struct MenuText {
-    text: &'static str,
+    text: String,
     font_size: u16,
 }
 
@@ -24,7 +24,7 @@ async fn draw_menu(texts: Vec<MenuText>) {
 
     // Calculate total height of all text items including padding
     for menu_text in &texts {
-        let text_size = measure_text(menu_text.text, None, menu_text.font_size, 1.0);
+        let text_size = measure_text(&menu_text.text, None, menu_text.font_size, 1.0);
         total_height += text_size.height + padding;
     }
     total_height -= padding; // Remove the padding after the last item
@@ -34,9 +34,9 @@ async fn draw_menu(texts: Vec<MenuText>) {
 
     // Draw each text item
     for menu_text in &texts {
-        let text_size = measure_text(menu_text.text, None, menu_text.font_size, 1.0);
+        let text_size = measure_text(&menu_text.text, None, menu_text.font_size, 1.0);
         draw_text(
-            menu_text.text,
+            &menu_text.text,
             screen_width() / 2.0 - text_size.width / 2.0,
             current_y,
             menu_text.font_size as f32,
@@ -120,7 +120,7 @@ async fn calculate_enemy_movement(enemies: &mut Vec<Enemy>) {
 }
 
 // Possible optimization: use bullet pool instead of creating & deleting new bullets every time
-async fn shoot_bullet(bullets: &mut Vec<Bullet>, player: &mut Player, last_shot: &mut f64) {
+async fn shoot_bullet(bullets: &mut Vec<Bullet>, player: &mut Player, last_shot: &mut f64, score: &mut i32) {
     let current_time = get_time();
     if is_key_down(KeyCode::Space) && current_time - *last_shot > 0.3 {
         let bullet_position = vec2(
@@ -129,10 +129,11 @@ async fn shoot_bullet(bullets: &mut Vec<Bullet>, player: &mut Player, last_shot:
         );
         bullets.push(Bullet::new(bullet_position));
         *last_shot = current_time;
+        *score -= 1;
     }
 }
 
-async fn check_collision(bullets: &mut Vec<Bullet>, enemies: &mut Vec<Enemy>) {
+async fn check_collision(bullets: &mut Vec<Bullet>, enemies: &mut Vec<Enemy>, score: &mut i32) {
     for bullet in bullets.iter_mut() {
         for enemy in enemies.iter_mut() {
             if bullet.position.x < enemy.position.x + enemy.texture.width() * enemy.scale &&   // Left
@@ -141,6 +142,7 @@ async fn check_collision(bullets: &mut Vec<Bullet>, enemies: &mut Vec<Enemy>) {
                bullet.position.y > enemy.position.y {                                          // Bottom
                     bullet.collided = true;
                     enemy.collided = true;
+                    *score += 10;
             }
         }
     }
@@ -166,6 +168,7 @@ async fn main() {
 
     let mut game_state = GameState::Menu;
     let mut level: i8 = 0;
+    let mut score: i32 = 0;
     let mut player = Player::new(player_texture);
     let mut enemies: Vec<Enemy> = Vec::new();
     let mut bullets: Vec<Bullet> = Vec::new();
@@ -177,8 +180,8 @@ async fn main() {
         match game_state {
             GameState::Menu => {
                 draw_menu(vec![
-                    MenuText { text: "CodeInvaders", font_size: 50 },
-                    MenuText { text: "Press ENTER to Start", font_size: 30 },
+                    MenuText { text: "CodeInvaders".to_string(), font_size: 50 },
+                    MenuText { text: "Press ENTER to Start".to_string(), font_size: 30 },
                 ]).await;
 
                 if is_key_pressed(KeyCode::Enter) {
@@ -191,7 +194,7 @@ async fn main() {
 
                 calculate_enemy_movement(&mut enemies).await;
 
-                shoot_bullet(&mut bullets, &mut player, &mut last_shot).await;
+                shoot_bullet(&mut bullets, &mut player, &mut last_shot, &mut score).await;
 
                 for bullet in bullets.iter_mut() {
                     bullet.update();
@@ -199,15 +202,16 @@ async fn main() {
                 }
                 bullets.retain(|bullet| bullet.position.y < screen_height());
 
-                check_collision(&mut bullets, &mut enemies).await;
+                check_collision(&mut bullets, &mut enemies, &mut score).await;
 
                 check_round_finished(&player, &enemies, &mut game_state).await;
             }
             GameState::LevelComplete => {
                 draw_menu(vec![
-                    MenuText { text: "LEVEL COMPLETE", font_size: 50 },
-                    MenuText { text: "Press ENTER to Continue", font_size: 30 },
-                    MenuText { text: "Press ESC to Finish", font_size: 30 },
+                    MenuText { text: "LEVEL COMPLETE".to_string(), font_size: 50 },
+                    MenuText { text: format!("SCORE: {score}"), font_size: 50 },
+                    MenuText { text: "Press ENTER to Continue".to_string(), font_size: 30 },
+                    MenuText { text: "Press ESC to Finish".to_string(), font_size: 30 },
                 ]).await;
 
                 if is_key_pressed(KeyCode::Enter) {
@@ -221,9 +225,10 @@ async fn main() {
             }
             GameState::GameOver => {
                 draw_menu(vec![
-                    MenuText { text: "GAME OVER", font_size: 50 },
-                    MenuText { text: "Press ENTER to Continue", font_size: 30 },
-                    MenuText { text: "Press ESC to Finish", font_size: 30 },
+                    MenuText { text: "GAME OVER".to_string(), font_size: 50 },
+                    MenuText { text: format!("SCORE: {score}"), font_size: 50 },
+                    MenuText { text: "Press ENTER to Continue".to_string(), font_size: 30 },
+                    MenuText { text: "Press ESC to Finish".to_string(), font_size: 30 },
                 ]).await;
 
                 level = 0;
