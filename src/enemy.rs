@@ -1,4 +1,5 @@
 use macroquad::prelude::*;
+use std::rc::Rc;
 
 pub enum Direction {
     Left,
@@ -6,7 +7,7 @@ pub enum Direction {
 }
 
 pub struct Enemy {
-    pub texture: Texture2D,
+    pub texture: Rc<Texture2D>,
     pub scale: f32,
     pub position: Vec2,
     pub level: i8,
@@ -15,7 +16,7 @@ pub struct Enemy {
 }
 
 impl Enemy {
-    pub fn new(texture: Texture2D, scale: f32, level: i8, position: Vec2) -> Self {
+    pub fn new(texture: Rc<Texture2D>, scale: f32, level: i8, position: Vec2) -> Self {
         Self {
             texture,
             scale,

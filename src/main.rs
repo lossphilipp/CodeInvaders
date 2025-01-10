@@ -1,3 +1,4 @@
+use std::{collections::HashMap, rc::Rc};
 use macroquad::prelude::*;
 mod player;
 mod enemy;
@@ -46,8 +47,8 @@ async fn draw_menu(texts: Vec<MenuText>) {
     }
 }
 
-async fn spawn_enemies(enemies: &mut Vec<Enemy>, level: &mut i8, rows: i8) {
-    let texture = load_enemy_texture(*level).await; 
+async fn spawn_enemies(enemies: &mut Vec<Enemy>, level: &mut i8, textures: &HashMap<&str, &[u8]>, rows: i8) {
+    let texture = load_enemy_texture(*level, textures).await; 
 
     let scale = screen_width() / 20.0 / texture.width();
     let enemy_width = texture.width() * scale;
@@ -55,13 +56,15 @@ async fn spawn_enemies(enemies: &mut Vec<Enemy>, level: &mut i8, rows: i8) {
     let spacing_x = enemy_width + 10.0;
     let spacing_y = enemy_height + 10.0;
 
+    let texture_pointer = Rc::new(texture);
+
     for row in 0..rows {
         for col in 0..10 {
             let x = col as f32 * spacing_x + 11.0;
             let y = row as f32 * spacing_y + 10.0;
-            // ToDo: Optimize this by not cloning the texture for every enemy
+
             enemies.push(Enemy::new(
-                Texture2D::clone(&texture),
+                Rc::clone(&texture_pointer),
                 scale,
                 *level,
                 vec2(x, y),
@@ -76,6 +79,7 @@ async fn init_game (
     enemies: &mut Vec<Enemy>,
     bullets: &mut Vec<Bullet>,
     game_state: &mut GameState,
+    textures: &HashMap<&str, &[u8]>,
 ) {
     *level += 1;
 
@@ -84,19 +88,24 @@ async fn init_game (
     bullets.clear();
 
     enemies.clear();
-    spawn_enemies(enemies, level, 5).await;
+    spawn_enemies(enemies, level, textures, 5).await;
 
     *game_state = GameState::Playing;
 }
 
-async fn load_enemy_texture(level: i8) -> Texture2D {
-    match level {
-        1 => load_texture("assets/python.png").await.unwrap(),
-        2 => load_texture("assets/java.png").await.unwrap(),
-        3 => load_texture("assets/dart.png").await.unwrap(),
-        4 => load_texture("assets/cplusplus.png").await.unwrap(),
-        _ => load_texture("assets/c.png").await.unwrap(),
-    }
+async fn load_enemy_texture(level: i8, textures: &HashMap<&str, &[u8]>,) -> Texture2D {
+    Texture2D::from_file_with_format(
+        textures[
+            match level {
+                1 => "python",
+                2 => "java",
+                3 => "dart",
+                4 => "cplusplus",
+                _ => "c",
+            }
+        ],
+        Some(ImageFormat::Png),
+    )
 }
 
 async fn calculate_enemy_movement(enemies: &mut Vec<Enemy>) {
@@ -162,14 +171,46 @@ async fn check_round_finished(player: &Player, enemies: &Vec<Enemy>, game_state:
     }
 }
 
+
 #[macroquad::main("CodeInvaders")]
 async fn main() {
-    let player_texture = load_texture("assets/rust.png").await.unwrap();
+    // This bit is really ugly but it's the only way to add the images directly into the executable, without needing a assets folder
+    let mut textures: HashMap<&str, &[u8]> = HashMap::new();
+    textures.insert(
+        "python",
+        include_bytes!("..\\assets\\python.png")
+    );
+    textures.insert(
+        "java",
+        include_bytes!("..\\assets\\java.png"),
+    );
+    textures.insert(
+        "dart",
+        include_bytes!("..\\assets\\dart.png"),
+    );
+    textures.insert(
+        "cplusplus",
+        include_bytes!("..\\assets\\cplusplus.png"),
+    );
+    textures.insert(
+        "c",
+        include_bytes!("..\\assets\\c.png"),
+    );
+    textures.insert(
+        "rust",
+        include_bytes!("..\\assets\\rust.png"),
+    );
+    // End of ugly bit
 
     let mut game_state = GameState::Menu;
     let mut level: i8 = 0;
     let mut score: i32 = 0;
-    let mut player = Player::new(player_texture);
+    let mut player = Player::new(
+        Texture2D::from_file_with_format(
+            textures["rust"],
+            Some(ImageFormat::Png),
+        )
+    );
     let mut enemies: Vec<Enemy> = Vec::new();
     let mut bullets: Vec<Bullet> = Vec::new();
     let mut last_shot = get_time();
@@ -185,7 +226,7 @@ async fn main() {
                 ]).await;
 
                 if is_key_pressed(KeyCode::Enter) {
-                    init_game(&mut level, &mut player, &mut enemies, &mut bullets, &mut game_state).await;
+                    init_game(&mut level, &mut player, &mut enemies, &mut bullets, &mut game_state, &textures).await;
                 }
             }
             GameState::Playing => {
@@ -215,7 +256,7 @@ async fn main() {
                 ]).await;
 
                 if is_key_pressed(KeyCode::Enter) {
-                    init_game(&mut level, &mut player, &mut enemies, &mut bullets, &mut game_state).await;
+                    init_game(&mut level, &mut player, &mut enemies, &mut bullets, &mut game_state, &textures).await;
                     game_state = GameState::Playing;
                 }
                 if is_key_pressed(KeyCode::Escape) {
@@ -234,7 +275,7 @@ async fn main() {
                 level = 0;
 
                 if is_key_pressed(KeyCode::Enter) {
-                    init_game(&mut level, &mut player, &mut enemies, &mut bullets, &mut game_state).await;
+                    init_game(&mut level, &mut player, &mut enemies, &mut bullets, &mut game_state, &textures).await;
                     game_state = GameState::Playing;
                 }
                 if is_key_pressed(KeyCode::Escape) {

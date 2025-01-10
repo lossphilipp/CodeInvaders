@@ -1,7 +1,11 @@
 [package]
 name = "CodeInvaders"
 version = "0.1.0"
+authors = ["Philipp Loß"]
 edition = "2021"
+description = "A simple Rust project for the cource 'Cocepts of Higher Programming Languages'"
+license = "MIT"
+repository = "https://github.com/lossphilipp/CodeInvaders"
 
 [dependencies]
 macroquad = "0.4.13"
