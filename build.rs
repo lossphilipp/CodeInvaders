@@ -2,8 +2,6 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-// This is not needed anymore since we are using the include_bytes macro
-// I still leave it here, in case you want to use it in the future
 fn main() {
     // OUT_DIR is automatically set by cargo and contains the build directory path
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());

@@ -17,7 +17,7 @@ impl NameInput {
             } else if c == '\u{8}' {
                 // Backspace key pressed
                 self.name.pop();
-            } else {
+            } else if c.is_alphanumeric() || c.is_whitespace() || c.is_ascii_punctuation() {
                 self.name.push(c);
             }
         }

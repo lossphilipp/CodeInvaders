@@ -53,7 +53,10 @@ async fn draw_menu(texts: Vec<MenuText>) {
     }
 }
 
-async fn load_enemy_texture(level: &i8, textures: &HashMap<&str, &[u8]>,) -> Texture2D {
+// Not used anymore, but I leave it here in case you want to use it in the future
+// when using this we need to add the assets first, by using something like this:
+// include_bytes!("..\\assets\\python.png")
+async fn _load_enemy_texture_from_binary(level: &i8, textures: &HashMap<&str, &[u8]>,) -> Texture2D {
     Texture2D::from_file_with_format(
         textures[
             match *level {
@@ -68,9 +71,8 @@ async fn load_enemy_texture(level: &i8, textures: &HashMap<&str, &[u8]>,) -> Tex
     )
 }
 
-// Not used anymore, but I leave it here in case you want to use it in the future
-async fn _load_enemy_texture_from_file(level: i8) -> Texture2D {
-    match level {
+async fn load_enemy_texture_from_file(level: &i8) -> Texture2D {
+    match *level {
         1 => load_texture("assets/python.png").await.unwrap(),
         2 => load_texture("assets/java.png").await.unwrap(),
         3 => load_texture("assets/dart.png").await.unwrap(),
@@ -109,7 +111,6 @@ async fn init_game (
     enemies: &mut Vec<Enemy>,
     bullets: &mut Vec<Bullet>,
     game_state: &mut GameState,
-    enemy_textures: &HashMap<&str, &[u8]>,
 ) {
     *level += 1;
 
@@ -119,8 +120,8 @@ async fn init_game (
 
     enemies.clear();
 
-    let current_enemy_texture = load_enemy_texture(level, enemy_textures).await;
-    // let current_enemy_texture = load_enemy_texture_from_file(level).await;
+    // let current_enemy_texture = load_enemy_texture(level, enemy_textures).await;
+    let current_enemy_texture = load_enemy_texture_from_file(level).await;
     spawn_enemies(enemies, level, current_enemy_texture, 5).await;
 
     *game_state = GameState::Playing;
@@ -191,46 +192,13 @@ async fn check_round_finished(player: &Player, enemies: &Vec<Enemy>, game_state:
 
 #[macroquad::main("CodeInvaders")]
 async fn main() {
-    // This bit is really ugly but it's the only way to add the images directly into the executable, without needing a assets folder
-    let mut textures: HashMap<&str, &[u8]> = HashMap::new();
-    textures.insert(
-        "python",
-        include_bytes!("..\\assets\\python.png")
-    );
-    textures.insert(
-        "java",
-        include_bytes!("..\\assets\\java.png"),
-    );
-    textures.insert(
-        "dart",
-        include_bytes!("..\\assets\\dart.png"),
-    );
-    textures.insert(
-        "cplusplus",
-        include_bytes!("..\\assets\\cplusplus.png"),
-    );
-    textures.insert(
-        "c",
-        include_bytes!("..\\assets\\c.png"),
-    );
-    textures.insert(
-        "rust",
-        include_bytes!("..\\assets\\rust.png"),
-    );
-    // End of ugly bit
-
     let mut game_state = GameState::Menu;
     let mut level: i8 = 0;
     let mut score: i32 = 0;
     let mut high_scores = HighScores::new();
     high_scores.load().unwrap_or_default();
     let mut name_input = NameInput::new();
-    let mut player = Player::new(
-        Texture2D::from_file_with_format(
-            textures["rust"],
-            Some(ImageFormat::Png),
-        )
-    );
+    let mut player = Player::new(load_texture("assets/rust.png").await.unwrap());
     let mut enemies: Vec<Enemy> = Vec::new();
     let mut bullets: Vec<Bullet> = Vec::new();
     let mut last_shot = get_time();
@@ -247,7 +215,7 @@ async fn main() {
                 ]).await;
 
                 if is_key_pressed(KeyCode::Enter) {
-                    init_game(&mut level, &mut player, &mut enemies, &mut bullets, &mut game_state, &textures).await;
+                    init_game(&mut level, &mut player, &mut enemies, &mut bullets, &mut game_state).await;
                 }
                 if is_key_pressed(KeyCode::H) {
                     game_state = GameState::HighScores;
@@ -284,7 +252,7 @@ async fn main() {
                 ]).await;
 
                 if is_key_pressed(KeyCode::Enter) {
-                    init_game(&mut level, &mut player, &mut enemies, &mut bullets, &mut game_state, &textures).await;
+                    init_game(&mut level, &mut player, &mut enemies, &mut bullets, &mut game_state).await;
                 }
                 if is_key_pressed(KeyCode::Escape) {
                     level = 0;

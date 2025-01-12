@@ -44,9 +44,7 @@ impl HighScores {
     }
 
     pub fn add_score(&mut self, name: String, score: i32) {
-        let trimmed_name: String = name.trim().chars()
-            .filter(|c| c.is_alphanumeric() || c.is_whitespace())
-            .collect();
+        let trimmed_name = name.trim().to_string();
 
         self.entries.push(HighScoreEntry { name: trimmed_name, score });
         self.entries.sort_by(|a, b| b.score.cmp(&a.score));
