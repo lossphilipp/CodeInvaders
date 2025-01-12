@@ -18,7 +18,9 @@ impl NameInput {
                 // Backspace key pressed
                 self.name.pop();
             } else if c.is_alphanumeric() || c.is_whitespace() || c.is_ascii_punctuation() {
-                self.name.push(c);
+                if !(self.name.is_empty() && c.is_whitespace()) {
+                    self.name.push(c);
+                }
             }
         }
     }
