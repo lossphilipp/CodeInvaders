@@ -1,17 +1,23 @@
 use std::{collections::HashMap, rc::Rc};
 use macroquad::prelude::*;
 mod player;
-mod enemy;
-mod bullet;
 use player::Player;
+mod enemy;
 use enemy::Enemy;
+mod bullet;
 use bullet::Bullet;
+mod high_scores;
+use high_scores::HighScores;
+mod name_input;
+use name_input::NameInput;
 
 enum GameState {
     Menu,
     Playing,
     LevelComplete,
     GameOver,
+    HighScores,
+    EnterName
 }
 
 struct MenuText {
@@ -178,7 +184,7 @@ async fn check_round_finished(player: &Player, enemies: &Vec<Enemy>, game_state:
     
     for enemy in enemies {
         if enemy.position.y + enemy.texture.height() * enemy.scale >= player.position.y {
-            *game_state = GameState::GameOver;
+            *game_state = GameState::EnterName;
         }
     }
 }
@@ -216,6 +222,9 @@ async fn main() {
     let mut game_state = GameState::Menu;
     let mut level: i8 = 0;
     let mut score: i32 = 0;
+    let mut high_scores = HighScores::new();
+    high_scores.load().unwrap_or_default();
+    let mut name_input = NameInput::new();
     let mut player = Player::new(
         Texture2D::from_file_with_format(
             textures["rust"],
@@ -234,10 +243,14 @@ async fn main() {
                 draw_menu(vec![
                     MenuText { text: "CodeInvaders".to_string(), font_size: 50 },
                     MenuText { text: "Press ENTER to Start".to_string(), font_size: 30 },
+                    MenuText { text: "Press H to show highscores".to_string(), font_size: 30 },
                 ]).await;
 
                 if is_key_pressed(KeyCode::Enter) {
                     init_game(&mut level, &mut player, &mut enemies, &mut bullets, &mut game_state, &textures).await;
+                }
+                if is_key_pressed(KeyCode::H) {
+                    game_state = GameState::HighScores;
                 }
             }
             GameState::Playing => {
@@ -259,7 +272,7 @@ async fn main() {
                 check_round_finished(&player, &enemies, &mut game_state).await;
 
                 if is_key_pressed(KeyCode::Escape) {
-                    game_state = GameState::GameOver;
+                    game_state = GameState::EnterName;
                 }
             }
             GameState::LevelComplete => {
@@ -283,11 +296,49 @@ async fn main() {
                     MenuText { text: "GAME OVER".to_string(), font_size: 50 },
                     MenuText { text: format!("SCORE: {score}"), font_size: 50 },
                     MenuText { text: "Press ESC to finish".to_string(), font_size: 30 },
+                    MenuText { text: "Press H to show highscores".to_string(), font_size: 30 },
                 ]).await;
 
                 if is_key_pressed(KeyCode::Escape) {
                     level = 0;
                     score = 0;
+                    game_state = GameState::Menu;
+                }
+                if is_key_pressed(KeyCode::H) {
+                    level = 0;
+                    score = 0;
+                    game_state = GameState::HighScores;
+                }
+            }
+            GameState::EnterName => {
+                if !high_scores.qualifies(score) {
+                    game_state = GameState::GameOver;
+                }
+
+                name_input.update();
+                name_input.draw();
+
+                if is_key_pressed(KeyCode::Enter) {
+                    high_scores.add_score(name_input.name.clone(), score);
+                    game_state = GameState::GameOver;
+                }
+            }
+            GameState::HighScores => {
+                let mut scores = high_scores.display().iter().map(
+                    |entry| MenuText { text: entry.clone(), font_size: 30 }
+                ).collect::<Vec<MenuText>>();
+
+                let mut menu_texts = vec![
+                    MenuText { text: "HIGH SCORES".to_string(), font_size: 50 },
+                    MenuText { text: "Press ESC to exit".to_string(), font_size: 30 },
+                    MenuText { text: " ".to_string(), font_size: 30 },
+                ];
+
+                menu_texts.append(&mut scores);
+
+                draw_menu(menu_texts).await;
+
+                if is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::Menu;
                 }
             }
