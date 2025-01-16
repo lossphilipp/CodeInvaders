@@ -14,10 +14,13 @@ impl Bullet {
     }
 
     pub fn draw(&self) {
-        draw_circle(self.position.x, self.position.y, 2.0, WHITE);
+        // ToDo: Bullet size calculation creates a cheat: First start game & then resize window to make bullet size bigger
+        draw_circle(self.position.x, self.position.y, screen_width() / 400.0, WHITE);
     }
 
-    pub fn update(&mut self) {
-        self.position.y -= 2.0;
+    pub fn update(&mut self, delta_time: &f32) {
+        let move_speed = screen_height() / 3.0;
+
+        self.position.y -= move_speed * *delta_time;
     }
 }

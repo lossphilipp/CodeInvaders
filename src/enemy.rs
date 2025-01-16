@@ -49,16 +49,17 @@ impl Enemy {
         };
     }
 
-    pub fn update(&mut self, direction_change: &bool) {
-        let speed = 0.25;
+    pub fn update(&mut self, direction_change: &bool, delta_time: &f32) {
+        let base_speed: f32 = screen_width() / 25.0;
+        let move_speed: f32 = base_speed * (1.1_f32).powi(self.level as i32);
 
         if *direction_change {
             self.change_direction();
         }
 
         match self.current_direction {
-            Direction::Left => self.position.x += self.level as f32 * speed,
-            Direction::Right => self.position.x -= self.level as f32 * speed,
+            Direction::Left => self.position.x += self.level as f32 * move_speed * *delta_time,
+            Direction::Right => self.position.x -= self.level as f32 * move_speed * *delta_time,
         };
     }
 }

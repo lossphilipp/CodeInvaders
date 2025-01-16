@@ -114,7 +114,7 @@ async fn init_game (
 ) {
     *level += 1;
 
-    player.reset_position();
+    player.reset();
 
     bullets.clear();
 
@@ -127,13 +127,16 @@ async fn init_game (
     *game_state = GameState::Playing;
 }
 
-async fn calculate_enemy_movement(enemies: &mut Vec<Enemy>) {
+async fn calculate_enemy_movement(enemies: &mut Vec<Enemy>, delta_time: &f32) {
     let screen_width = screen_width();
     let mut hit_wall = false;
 
     let first_enemy = enemies.first().unwrap();
     let enemy_width = first_enemy.texture.width() * first_enemy.scale;
 
+    // ToDo: Sometimes this is bugged and moves all enemies directly to the bottom
+    //       I assume the enemies get updated to often and glitch into the padding,
+    //       which triggers the direction change multiple times
     for enemy in enemies.iter() {
         if enemy.position.x + enemy_width >= screen_width - 10.0 || enemy.position.x <= 10.0 {
             hit_wall = true;
@@ -142,15 +145,16 @@ async fn calculate_enemy_movement(enemies: &mut Vec<Enemy>) {
     }
 
     for enemy in enemies.iter_mut() {
-        enemy.update(&hit_wall);
+        enemy.update(&hit_wall, delta_time);
         enemy.draw();
     }
 }
 
 // Possible optimization: use bullet pool instead of creating & deleting new bullets every time
-async fn shoot_bullet(bullets: &mut Vec<Bullet>, player: &mut Player, last_shot: &mut f64, score: &mut i32) {
+async fn shoot_bullet(bullets: &mut Vec<Bullet>, player: &mut Player, last_shot: &mut f64, delta_time: &f32, score: &mut i32) {
+    let bullet_shoot_speed = 50.0;
     let current_time = get_time();
-    if is_key_down(KeyCode::Space) && current_time - *last_shot > 0.3 {
+    if is_key_down(KeyCode::Space) && current_time - *last_shot > (bullet_shoot_speed * *delta_time as f64) {
         let bullet_position = vec2(
             player.position.x + (player.texture.width() * player.scale) / 2.0,
             player.position.y
@@ -192,6 +196,7 @@ async fn check_round_finished(player: &Player, enemies: &Vec<Enemy>, game_state:
 
 #[macroquad::main("CodeInvaders")]
 async fn main() {
+    let mut delta_time;
     let mut game_state = GameState::Menu;
     let mut level: i8 = 0;
     let mut score: i32 = 0;
@@ -204,6 +209,7 @@ async fn main() {
     let mut last_shot = get_time();
 
     loop {
+        delta_time = get_frame_time();
         clear_background(BLACK);
 
         match game_state {
@@ -222,15 +228,15 @@ async fn main() {
                 }
             }
             GameState::Playing => {
-                player.update();
+                player.update(&delta_time);
                 player.draw();
 
-                calculate_enemy_movement(&mut enemies).await;
+                calculate_enemy_movement(&mut enemies, &delta_time).await;
 
-                shoot_bullet(&mut bullets, &mut player, &mut last_shot, &mut score).await;
+                shoot_bullet(&mut bullets, &mut player, &mut last_shot, &delta_time, &mut score).await;
 
                 for bullet in bullets.iter_mut() {
-                    bullet.update();
+                    bullet.update(&delta_time);
                     bullet.draw();
                 }
                 bullets.retain(|bullet| bullet.position.y < screen_height());

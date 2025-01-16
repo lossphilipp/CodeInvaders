@@ -17,10 +17,9 @@ impl NameInput {
             } else if c == '\u{8}' {
                 // Backspace key pressed
                 self.name.pop();
-            } else if c.is_alphanumeric() || c.is_whitespace() || c.is_ascii_punctuation() {
-                if !(self.name.is_empty() && c.is_whitespace()) {
-                    self.name.push(c);
-                }
+            } else if c.is_alphanumeric() || c.is_ascii_punctuation() {
+                // We do not accept whitespace or other special characters
+                self.name.push(c);
             }
         }
     }
