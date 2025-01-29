@@ -53,8 +53,8 @@ async fn draw_menu(texts: Vec<MenuText>) {
     }
 }
 
-// Not used anymore, but I leave it here in case you want to use it in the future
-// when using this we need to add the assets first, by using something like this:
+// Not used anymore, but I leave it here in case I want to use it in the future
+// when using this I need to add the assets first, by using something like this:
 // include_bytes!("..\\assets\\python.png")
 async fn _load_enemy_texture_from_binary(level: &i8, textures: &HashMap<&str, &[u8]>,) -> Texture2D {
     Texture2D::from_file_with_format(
@@ -165,16 +165,20 @@ async fn shoot_bullet(bullets: &mut Vec<Bullet>, player: &mut Player, last_shot:
     }
 }
 
+fn is_collision(bullet: &Bullet, enemy: &Enemy) -> bool {
+    bullet.position.x < enemy.position.x + enemy.texture.width() * enemy.scale &&   // Left
+    bullet.position.x > enemy.position.x &&                                         // Right
+    bullet.position.y < enemy.position.y + enemy.texture.height() * enemy.scale &&  // Top
+    bullet.position.y > enemy.position.y                                            // Bottom
+}
+
 async fn check_collision(bullets: &mut Vec<Bullet>, enemies: &mut Vec<Enemy>, score: &mut i32) {
     for bullet in bullets.iter_mut() {
         for enemy in enemies.iter_mut() {
-            if bullet.position.x < enemy.position.x + enemy.texture.width() * enemy.scale &&   // Left
-               bullet.position.x > enemy.position.x &&                                         // Right
-               bullet.position.y < enemy.position.y + enemy.texture.height() * enemy.scale &&  // Top
-               bullet.position.y > enemy.position.y {                                          // Bottom
-                    bullet.collided = true;
-                    enemy.collided = true;
-                    *score += 10;
+            if is_collision(bullet, enemy) {                                          // Bottom
+                bullet.collided = true;
+                enemy.collided = true;
+                *score += 10;
             }
         }
     }
