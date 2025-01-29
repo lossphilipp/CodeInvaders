@@ -56,29 +56,30 @@ async fn draw_menu(texts: Vec<MenuText>) {
 // Not used anymore, but I leave it here in case I want to use it in the future
 // when using this I need to add the assets first, by using something like this:
 // include_bytes!("..\\assets\\python.png")
-async fn _load_enemy_texture_from_binary(level: &i8, textures: &HashMap<&str, &[u8]>,) -> Texture2D {
+async fn _load_enemy_texture_from_binary(filename: &string, textures: &HashMap<&str, &[u8]>,) -> Texture2D {
     Texture2D::from_file_with_format(
-        textures[
-            match *level {
-                1 => "python",
-                2 => "java",
-                3 => "dart",
-                4 => "cplusplus",
-                _ => "c",
-            }
-        ],
+        textures[filename],
         Some(ImageFormat::Png),
     )
 }
 
-async fn load_enemy_texture_from_file(level: &i8) -> Texture2D {
-    match *level {
-        1 => load_texture("assets/python.png").await.unwrap(),
-        2 => load_texture("assets/java.png").await.unwrap(),
-        3 => load_texture("assets/dart.png").await.unwrap(),
-        4 => load_texture("assets/cplusplus.png").await.unwrap(),
-        _ => load_texture("assets/c.png").await.unwrap(),
-    }
+async fn load_texture_from_file(path: &string) -> Result<Texture2D, String> {
+    load_texture(*path).await.map_err(|e| format!("Failed to load texture: {}", e))
+}
+
+async fn load_enemy_texture(level: &i8) -> Result<Texture2D, String> {
+    let texture_path = match *level {
+        1 => "assets/python.png",
+        2 => "assets/java.png",
+        3 => "assets/dart.png",
+        4 => "assets/cplusplus.png",
+        _ => "assets/c.png",
+    };
+
+    load_texture_from_file(texture_path).await.unwrap_or_else(|e| {
+        eprintln!("{}", e);
+        std::process::exit(1);
+    })
 }
 
 async fn spawn_enemies(enemies: &mut Vec<Enemy>, level: &mut i8, texture: Texture2D, rows: i8) {
@@ -120,8 +121,7 @@ async fn init_game (
 
     enemies.clear();
 
-    // let current_enemy_texture = load_enemy_texture(level, enemy_textures).await;
-    let current_enemy_texture = load_enemy_texture_from_file(level).await;
+    let current_enemy_texture = load_enemy_texture(level).await;
     spawn_enemies(enemies, level, current_enemy_texture, 5).await;
 
     *game_state = GameState::Playing;
@@ -131,7 +131,7 @@ async fn calculate_enemy_movement(enemies: &mut Vec<Enemy>, delta_time: &f32) {
     let screen_width = screen_width();
     let mut hit_wall = false;
 
-    let first_enemy = enemies.first().unwrap();
+    let first_enemy = enemies.first().unwrap_or_default();
     let enemy_width = first_enemy.texture.width() * first_enemy.scale;
 
     // ToDo: Sometimes this is bugged and moves all enemies directly to the bottom
@@ -207,10 +207,19 @@ async fn main() {
     let mut high_scores = HighScores::new();
     high_scores.load().unwrap_or_default();
     let mut name_input = NameInput::new();
-    let mut player = Player::new(load_texture("assets/rust.png").await.unwrap());
     let mut enemies: Vec<Enemy> = Vec::new();
     let mut bullets: Vec<Bullet> = Vec::new();
     let mut last_shot = get_time();
+
+    let mut player;
+    let texture_result = load_texture("assets/rust.png").await;
+    match texture_result {
+        Ok(texture) => player = Player::new(texture),
+        Err(e) => {
+            eprintln!("Failed to load player texture: {}", e);
+            std::process::exit(1);
+        }
+    };
 
     loop {
         delta_time = get_frame_time();
