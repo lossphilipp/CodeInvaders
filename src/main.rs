@@ -266,7 +266,7 @@ async fn main() {
                 }
                 if is_key_pressed(KeyCode::Escape) {
                     level = 0;
-                    game_state = GameState::Menu;
+                    game_state = GameState::EnterName;
                 }
             }
             GameState::GameOver => {
@@ -277,7 +277,8 @@ async fn main() {
                     MenuText { text: "Press H to show highscores".to_string(), font_size: 30 },
                 ]).await;
 
-                if is_key_pressed(KeyCode::Escape) {
+                if is_key_pressed(KeyCode::Escape) ||
+                   is_key_pressed(KeyCode::Enter) {
                     level = 0;
                     score = 0;
                     game_state = GameState::Menu;
