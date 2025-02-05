@@ -36,20 +36,22 @@ jobs:
       run: cargo test --verbose
     - name: 🛠️ Build artifact
       run: cargo build -r --verbose
-    - name: 📦 Create release zip file
+    - name: 📦 Create release zip file (Linux)
+      if: runner.os == 'Linux'
       run: |
         mkdir -p build
-        if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-          cp target/release/CodeInvaders build/
-          cp -r assets build/
-          cd build
-          zip -r CodeInvaders.zip codeinvaders assets
-        else
-          cp target/release/codeinvaders.exe build/
-          cp -r assets build/
-          cd build
-          powershell Compress-Archive -Path CodeInvaders.exe, assets -DestinationPath CodeInvaders.zip
-        fi
+        cp target/release/CodeInvaders build/
+        cp -r assets build/
+        cd build
+        zip -r CodeInvaders.zip CodeInvaders assets
+    - name: 📦 Create release zip file (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        mkdir build
+        cp target/release/CodeInvaders.exe build/
+        cp -r assets build/
+        cd build
+        powershell Compress-Archive -Path CodeInvaders.exe, assets -DestinationPath CodeInvaders.zip
     - name: ⬆️ Publish build artifacts
       uses: actions/upload-artifact@v4
       with:
