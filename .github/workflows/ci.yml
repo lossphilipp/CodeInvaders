@@ -1,0 +1,38 @@
+---
+name: CodeInvaders CI Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+# Grant status permission for MULTI_STATUS
+permissions:
+  contents: read
+  packages: read
+  statuses: write
+  actions: write
+
+jobs:
+  build:
+    name: 🛠️ Build artifact
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: ⬇️ Checkout repo
+      uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    - name: 🛠️ Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    - name: 🧪 Run Tests
+      run: cargo test --verbose
+    - name: ⬆️ Publish build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: target/debug/
